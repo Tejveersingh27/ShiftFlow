@@ -14,4 +14,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
+
+    // This tells EF core that these two classes are tables too !
+    
+    public DbSet<Organization> Organizations => Set<Organization>();
+public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
+
 }
