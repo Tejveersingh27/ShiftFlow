@@ -1,4 +1,13 @@
-﻿@using ShiftFlow
+@* _ViewImports.cshtml — applied automatically to EVERY .cshtml view.
+   Think of it as one shared block of "import" lines so each view doesn't repeat them.
+   The leading underscore is a convention: "this is a helper file, not a page." *@
+
+@* Namespaces every view can use without a per-file @using: *@
+@using ShiftFlow
 @using ShiftFlow.Models
+@using ShiftFlow.Models.Entities
 @using ShiftFlow.ViewModels
+
+@* Turns on "tag helpers" — the asp-controller, asp-action, asp-for attributes
+   that let Razor generate URLs and form fields for us. *@
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers

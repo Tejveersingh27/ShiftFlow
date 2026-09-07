@@ -1,0 +1,38 @@
+@* The data this page receives — the exact object the controller passed to View(memberships).
+   "Model" (capital M) below refers to this. *@
+@model List<OrganizationMember>
+
+@* A C# block. Runs on the server before the HTML is built. Sets the browser tab / <h1> title. *@
+@{
+    ViewData["Title"] = "Your organizations";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Your organizations</h1>
+    @* asp-controller / asp-action build the URL for us: /Organizations/Create *@
+    <a asp-controller="Organizations" asp-action="Create" class="btn btn-primary">New organization</a>
+</div>
+
+@* Plain C# if. The user belongs to no organizations -> show an empty state. *@
+@if (Model.Count == 0)
+{
+    <div class="text-center border rounded p-5 text-muted">
+        <p class="mb-3">You're not part of an organization yet.</p>
+        <a asp-controller="Organizations" asp-action="Create" class="btn btn-primary">Create one</a>
+    </div>
+}
+else
+{
+    <div class="list-group">
+        @* Plain C# loop. The HTML inside {} is repeated once per membership. *@
+        @foreach (var m in Model)
+        {
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                @* @m.Organization.Name prints the value into the HTML.
+                   Organization is filled because the service used .Include(m => m.Organization). *@
+                <span>@m.Organization.Name</span>
+                <span class="badge bg-secondary">@m.Role</span>
+            </div>
+        }
+    </div>
+}

@@ -47,6 +47,19 @@ public class OrganizationsController : Controller
         // Post/Redirect/Get: redirect after a successful POST so a browser
         // refresh doesn't submit the form again.
         TempData["Success"] = $"Organization \"{organization.Name}\" created.";
-        return RedirectToAction("Index", "Home");
+        return RedirectToAction("Index"); // -> /Organizations (this controller's Index)
+    }
+    // GET /Organizations  — list the organizations the logged-in user belongs to.
+    [HttpGet]
+    public async Task<IActionResult> Index()
+    {
+        // who's logged in? get their ID
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        // what organizations is this user a member of? (the service does the DB query)
+        var memberships = await _organizationService.GetMembershipsForUserAsync(userId);
+
+        // render the page, passing it that list to display
+        return View(memberships);
     }
 }

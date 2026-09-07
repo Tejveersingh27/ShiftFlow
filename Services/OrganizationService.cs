@@ -1,5 +1,7 @@
 using ShiftFlow.Data;
 using ShiftFlow.Models.Entities;
+using Microsoft.EntityFrameworkCore;
+// This does the real work !
 
 namespace ShiftFlow.Services;
 
@@ -39,5 +41,14 @@ public class OrganizationService
         await _db.SaveChangesAsync();
 
         return organization;
+    }
+    public async Task<List<OrganizationMember>> GetMembershipsForUserAsync(string userId)
+    {
+        return await _db.OrganizationMembers
+            .Where(m => m.UserId == userId)
+            .Include(m => m.Organization) // Include the related Organization entity
+            .OrderBy(m => m.Organization.Name) // Order by organization name
+            .ToListAsync();
+            
     }
 }
