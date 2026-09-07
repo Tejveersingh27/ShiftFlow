@@ -6,6 +6,7 @@
 using Microsoft.EntityFrameworkCore;
 using ShiftFlow.Data;
 using ShiftFlow.Models.Entities;
+using ShiftFlow.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,11 +37,14 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
         options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// Our own pages use the MVC (Controller + View) style.
+// Our own business-logic services. AddScoped = one instance per HTTP request,
+// which matches the DbContext lifetime it depends on.
+builder.Services.AddScoped<OrganizationService>();
+
+// Our own pages use the MVC style.
 builder.Services.AddControllersWithViews();
 
 // The ready-made login/register/logout screens from Identity are "Razor Pages",
-// a slightly different style, so we switch that on too.
 builder.Services.AddRazorPages();
 
 var app = builder.Build();

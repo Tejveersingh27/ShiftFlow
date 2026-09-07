@@ -33,6 +33,10 @@
         </nav>
     </header>
     <div class="container">
+        @if (TempData["Success"] is string successMessage)
+        {
+            <div class="alert alert-success mt-3" role="alert">@successMessage</div>
+        }
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
