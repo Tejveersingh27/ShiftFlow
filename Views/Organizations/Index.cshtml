@@ -33,6 +33,7 @@ else
                 <span>
                     <span class="badge bg-secondary me-2">@m.Role</span>
                     <a asp-controller="Members" asp-action="Index" asp-route-organizationId="@m.OrganizationId" class="btn btn-sm btn-outline-secondary">Team</a>
+                    <a asp-controller="Departments" asp-action="Index" asp-route-organizationId="@m.OrganizationId" class="btn btn-sm btn-outline-secondary">Departments</a>
                 </span>
             </div>
         }

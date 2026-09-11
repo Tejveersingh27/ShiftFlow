@@ -1,0 +1,36 @@
+@model List<Department>
+@{
+    ViewData["Title"] = "Departments";
+    var organizationId = (Guid)ViewData["OrganizationId"]!;
+}
+
+<h1 class="h3 mb-3">Departments</h1>
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">No departments yet.</p>
+}
+else
+{
+    <ul class="list-group mb-4" style="max-width: 420px;">
+        @foreach (var d in Model)
+        {
+            <li class="list-group-item">@d.Name</li>
+        }
+    </ul>
+}
+
+<h2 class="h5 mb-3">Add a department</h2>
+<form asp-controller="Departments" asp-action="Create" method="post" class="row g-2 align-items-end" style="max-width: 480px;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="OrganizationId" value="@organizationId" />
+
+    <div class="col-sm-8">
+        <label class="form-label">Name</label>
+        <input type="text" name="Name" class="form-control" required minlength="2" maxlength="50" />
+    </div>
+
+    <div class="col-sm-4">
+        <button type="submit" class="btn btn-primary w-100">Add</button>
+    </div>
+</form>

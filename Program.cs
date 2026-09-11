@@ -41,6 +41,7 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 // which matches the DbContext lifetime it depends on.
 builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<MemberService>();
+builder.Services.AddScoped<DepartmentService>();
 
 // Our own pages use the MVC style.
 builder.Services.AddControllersWithViews();
