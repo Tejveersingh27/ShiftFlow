@@ -31,6 +31,16 @@ public class MemberService
             .AnyAsync(m => m.OrganizationId == organizationId && m.UserId == userId);
     }
 
+    // Which role does this user hold in this org? Null if they're not a member at all.
+    // Used where "any member" isn't specific enough — e.g. Employees should see
+    // less than Owners/Managers on the Schedules pages.
+    public async Task<OrganizationRole?> GetRoleAsync(Guid organizationId, string userId)
+    {
+        var membership = await _db.OrganizationMembers
+            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == userId);
+        return membership?.Role;
+    }
+
     public async Task<List<OrganizationMember>> GetMembersAsync(Guid organizationId) // return all the members
     {
         return await _db.OrganizationMembers

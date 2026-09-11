@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Schedules";
     var organizationId = (Guid)ViewData["OrganizationId"]!;
+    var isManager = (bool)ViewData["IsManager"]!;
 }
 
 <h1 class="h3 mb-3">Schedules</h1>
@@ -24,17 +25,20 @@ else
     </div>
 }
 
-<h2 class="h5 mb-3">New schedule</h2>
-<form asp-controller="Schedules" asp-action="Create" method="post" class="row g-2 align-items-end" style="max-width: 480px;">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="OrganizationId" value="@organizationId" />
+@if (isManager)
+{
+    <h2 class="h5 mb-3">New schedule</h2>
+    <form asp-controller="Schedules" asp-action="Create" method="post" class="row g-2 align-items-end" style="max-width: 480px;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="OrganizationId" value="@organizationId" />
 
-    <div class="col-sm-8">
-        <label class="form-label">Week starting (Monday)</label>
-        <input type="date" name="WeekStartDate" class="form-control" required />
-    </div>
+        <div class="col-sm-8">
+            <label class="form-label">Week starting (Monday)</label>
+            <input type="date" name="WeekStartDate" class="form-control" required />
+        </div>
 
-    <div class="col-sm-4">
-        <button type="submit" class="btn btn-primary w-100">Create</button>
-    </div>
-</form>
+        <div class="col-sm-4">
+            <button type="submit" class="btn btn-primary w-100">Create</button>
+        </div>
+    </form>
+}

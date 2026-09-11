@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ShiftFlow.Models.Entities;
 using ShiftFlow.Services;
 using ShiftFlow.ViewModels;
 
@@ -23,14 +24,25 @@ public class SchedulesController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(Guid organizationId)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;// who's logged in? get their ID
-        if (!await _memberService.IsMemberAsync(organizationId, userId)) //check if the logged-in user is a member of this organization. If not, return 403 Forbidden.
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var role = await _memberService.GetRoleAsync(organizationId, userId);
+        if (role is null)
         {
-            return Forbid();
+            return Forbid(); // not a member of this org at all
         }
 
         var schedules = await _schedulingService.GetSchedulesAsync(organizationId);
+
+        // Employees only ever see the official, published schedule — drafts are
+        // a manager's working copy, not something employees should see mid-edit.
+        bool isManager = role != OrganizationRole.Employee;
+        if (!isManager)
+        {
+            schedules = schedules.Where(s => s.Status == ScheduleStatus.Published).ToList();
+        }
+
         ViewData["OrganizationId"] = organizationId;
+        ViewData["IsManager"] = isManager; // the view uses this to hide the "new schedule" form
         return View(schedules);
     }
 
@@ -67,12 +79,21 @@ public class SchedulesController : Controller
         }
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        if (!await _memberService.IsMemberAsync(schedule.OrganizationId, userId))
+        var role = await _memberService.GetRoleAsync(schedule.OrganizationId, userId);
+        if (role is null)
+        {
+            return Forbid(); // not a member of this org
+        }
+
+        // Employees may only view schedules once published — a Draft is a
+        // manager's working copy, not yet the "official" schedule.
+        if (role == OrganizationRole.Employee && schedule.Status == ScheduleStatus.Draft)
         {
             return Forbid();
         }
 
         var members = await _memberService.GetMembersAsync(schedule.OrganizationId);
+        ViewData["IsManager"] = role != OrganizationRole.Employee;
         return View(new ScheduleDetailsViewModel { Schedule = schedule, OrganizationMembers = members });
     }
 
