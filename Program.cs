@@ -40,6 +40,7 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 // Our own business-logic services. AddScoped = one instance per HTTP request,
 // which matches the DbContext lifetime it depends on.
 builder.Services.AddScoped<OrganizationService>();
+builder.Services.AddScoped<MemberService>();
 
 // Our own pages use the MVC style.
 builder.Services.AddControllersWithViews();

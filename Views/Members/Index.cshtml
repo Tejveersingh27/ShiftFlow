@@ -1,0 +1,54 @@
+@model List<OrganizationMember>
+@{
+    ViewData["Title"] = "Team";
+    var organizationId = (Guid)ViewData["OrganizationId"]!;
+}
+
+<h1 class="h3 mb-3">Team</h1>
+
+<table class="table align-middle">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Joined</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var m in Model)
+        {
+            <tr>
+                <td>@m.User.Email</td>
+                <td><span class="badge bg-secondary">@m.Role</span></td>
+                <td>@m.JoinedAtUtc.ToString("MMM d, yyyy")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<hr class="my-4" />
+
+<h2 class="h5 mb-3">Add a member</h2>
+<p class="text-muted small">The person must already have a ShiftFlow account.</p>
+
+<form asp-controller="Members" asp-action="Add" method="post" class="row g-2 align-items-end" style="max-width: 560px;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="OrganizationId" value="@organizationId" />
+
+    <div class="col-sm-6">
+        <label class="form-label">Email</label>
+        <input type="email" name="Email" class="form-control" required />
+    </div>
+
+    <div class="col-sm-4">
+        <label class="form-label">Role</label>
+        <select name="Role" class="form-select">
+            <option value="@OrganizationRole.Manager">Manager</option>
+            <option value="@OrganizationRole.Employee" selected>Employee</option>
+        </select>
+    </div>
+
+    <div class="col-sm-2">
+        <button type="submit" class="btn btn-primary w-100">Add</button>
+    </div>
+</form>

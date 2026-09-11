@@ -2,7 +2,6 @@
    "Model" (capital M) below refers to this. *@
 @model List<OrganizationMember>
 
-@* A C# block. Runs on the server before the HTML is built. Sets the browser tab / <h1> title. *@
 @{
     ViewData["Title"] = "Your organizations";
 }
@@ -24,14 +23,17 @@
 else
 {
     <div class="list-group">
-        @* Plain C# loop. The HTML inside {} is repeated once per membership. *@
+        @*The HTML inside {} is repeated once per membership. *@
         @foreach (var m in Model)
         {
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 @* @m.Organization.Name prints the value into the HTML.
                    Organization is filled because the service used .Include(m => m.Organization). *@
                 <span>@m.Organization.Name</span>
-                <span class="badge bg-secondary">@m.Role</span>
+                <span>
+                    <span class="badge bg-secondary me-2">@m.Role</span>
+                    <a asp-controller="Members" asp-action="Index" asp-route-organizationId="@m.OrganizationId" class="btn btn-sm btn-outline-secondary">Team</a>
+                </span>
             </div>
         }
     </div>
