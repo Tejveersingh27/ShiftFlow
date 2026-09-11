@@ -1,0 +1,89 @@
+@model ScheduleDetailsViewModel
+@{
+    ViewData["Title"] = "Schedule details";
+    var schedule = Model.Schedule;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Week of @schedule.WeekStartDate.ToString("MMM d, yyyy")</h1>
+    <span class="badge @(schedule.Status == ScheduleStatus.Published ? "bg-success" : "bg-secondary")">@schedule.Status</span>
+</div>
+
+@if (schedule.Status == ScheduleStatus.Draft)
+{
+    <form asp-controller="Schedules" asp-action="Publish" method="post" class="mb-4">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="scheduleId" value="@schedule.Id" />
+        <button type="submit" class="btn btn-success">Publish schedule</button>
+    </form>
+}
+
+<table class="table align-middle" style="max-width: 760px;">
+    <thead>
+        <tr>
+            <th>Starts</th>
+            <th>Ends</th>
+            <th>Assigned to</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (schedule.Shifts.Count == 0)
+        {
+            <tr><td colspan="3" class="text-muted">No shifts yet.</td></tr>
+        }
+        @foreach (var shift in schedule.Shifts.OrderBy(s => s.StartsAtUtc))
+        {
+            <tr>
+                <td>@shift.StartsAtUtc.ToString("ddd h:mm tt")</td>
+                <td>@shift.EndsAtUtc.ToString("ddd h:mm tt")</td>
+                <td>
+                    @if (shift.AssignedMember is not null)
+                    {
+                        @shift.AssignedMember.User.Email
+                    }
+                    else if (schedule.Status == ScheduleStatus.Draft)
+                    {
+                        @* Inline "assign" form: a dropdown of the org's members + a submit button. *@
+                        <form asp-controller="Schedules" asp-action="AssignShift" method="post" class="d-flex gap-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="shiftId" value="@shift.Id" />
+                            <input type="hidden" name="scheduleId" value="@schedule.Id" />
+                            <select name="memberId" class="form-select form-select-sm" style="max-width: 220px;">
+                                @foreach (var member in Model.OrganizationMembers)
+                                {
+                                    <option value="@member.Id">@member.User.Email (@member.Role)</option>
+                                }
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Assign</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Open</span>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (schedule.Status == ScheduleStatus.Draft)
+{
+    <h2 class="h5 mb-3">Add a shift</h2>
+    <form asp-controller="Schedules" asp-action="AddShift" method="post" class="row g-2 align-items-end" style="max-width: 560px;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ScheduleId" value="@schedule.Id" />
+
+        <div class="col-sm-5">
+            <label class="form-label">Starts</label>
+            <input type="datetime-local" name="StartsAt" class="form-control" required />
+        </div>
+        <div class="col-sm-5">
+            <label class="form-label">Ends</label>
+            <input type="datetime-local" name="EndsAt" class="form-control" required />
+        </div>
+        <div class="col-sm-2">
+            <button type="submit" class="btn btn-primary w-100">Add</button>
+        </div>
+    </form>
+}

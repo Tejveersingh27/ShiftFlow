@@ -16,9 +16,52 @@ public class SchedulingService
     InvalidTimeRange
     }
 
+    public enum AssignmentResult
+    {
+        Assigned,
+        NotAuthorized,
+        ShiftNotFound,
+        MemberNotInOrganization,
+        OverlappingShift
+    }
+
     public SchedulingService(ApplicationDbContext db)
     {
         _db = db;
+    }
+
+    // THE conflict-detection check: can this member take this shift?
+    // Blocks the assignment if they're already on another shift whose time
+    // range overlaps this one — the classic interval-overlap test:
+    // two ranges overlap if (startA < endB) AND (startB < endA).
+    public async Task<AssignmentResult> AssignEmployeeAsync(Guid shiftId, string actingUserId, Guid memberId)
+    {
+        var shift = await _db.Shifts.Include(s => s.Schedule).FirstOrDefaultAsync(s => s.Id == shiftId);
+        if (shift is null) return AssignmentResult.ShiftNotFound;
+
+        var organizationId = shift.Schedule.OrganizationId;
+
+        var actingMembership = await _db.OrganizationMembers
+            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == actingUserId);
+        if (actingMembership is null || actingMembership.Role == OrganizationRole.Employee)
+            return AssignmentResult.NotAuthorized;
+
+        // The person being assigned must belong to the SAME org as the shift —
+        // this is the multi-tenancy rule applied to assignment specifically.
+        var targetMember = await _db.OrganizationMembers
+            .FirstOrDefaultAsync(m => m.Id == memberId && m.OrganizationId == organizationId);
+        if (targetMember is null) return AssignmentResult.MemberNotInOrganization;
+
+        bool hasOverlap = await _db.Shifts
+            .Where(s => s.AssignedMemberId == memberId && s.Id != shiftId)
+            .AnyAsync(s => s.StartsAtUtc < shift.EndsAtUtc && s.EndsAtUtc > shift.StartsAtUtc);
+
+        if (hasOverlap) return AssignmentResult.OverlappingShift;
+
+        shift.AssignedMemberId = memberId;
+        await _db.SaveChangesAsync();
+
+        return AssignmentResult.Assigned;
     }
 
     public async Task<List<Schedule>> GetSchedulesAsync(Guid organizationId)

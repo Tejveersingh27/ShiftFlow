@@ -42,6 +42,7 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<MemberService>();
 builder.Services.AddScoped<DepartmentService>();
+builder.Services.AddScoped<SchedulingService>();
 
 // Our own pages use the MVC style.
 builder.Services.AddControllersWithViews();

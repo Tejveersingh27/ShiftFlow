@@ -288,6 +288,55 @@ namespace ShiftFlow.Migrations
                     b.ToTable("OrganizationMembers");
                 });
 
+            modelBuilder.Entity("ShiftFlow.Models.Entities.Schedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("WeekStartDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("Schedules");
+                });
+
+            modelBuilder.Entity("ShiftFlow.Models.Entities.Shift", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssignedMemberId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("EndsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedMemberId");
+
+                    b.HasIndex("ScheduleId");
+
+                    b.ToTable("Shifts");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -369,9 +418,42 @@ namespace ShiftFlow.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ShiftFlow.Models.Entities.Schedule", b =>
+                {
+                    b.HasOne("ShiftFlow.Models.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("ShiftFlow.Models.Entities.Shift", b =>
+                {
+                    b.HasOne("ShiftFlow.Models.Entities.OrganizationMember", "AssignedMember")
+                        .WithMany()
+                        .HasForeignKey("AssignedMemberId");
+
+                    b.HasOne("ShiftFlow.Models.Entities.Schedule", "Schedule")
+                        .WithMany("Shifts")
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AssignedMember");
+
+                    b.Navigation("Schedule");
+                });
+
             modelBuilder.Entity("ShiftFlow.Models.Entities.Organization", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("ShiftFlow.Models.Entities.Schedule", b =>
+                {
+                    b.Navigation("Shifts");
                 });
 #pragma warning restore 612, 618
         }
