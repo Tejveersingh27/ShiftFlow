@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ShiftFlow.Models.Entities;
 using ShiftFlow.Services;
 using ShiftFlow.ViewModels;
 
@@ -23,13 +24,15 @@ public class MembersController : Controller
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
         // Must belong to this org (any role) to even see its team list.
-        if (!await _memberService.IsMemberAsync(organizationId, userId))
+        var role = await _memberService.GetRoleAsync(organizationId, userId);
+        if (role is null)
         {
             return Forbid();
         }
 
         var members = await _memberService.GetMembersAsync(organizationId);
         ViewData["OrganizationId"] = organizationId;
+        ViewData["IsManager"] = role != OrganizationRole.Employee; // hides the add-member form for Employees
         return View(members);
     }
 

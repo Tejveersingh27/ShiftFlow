@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ShiftFlow.Models.Entities;
 using ShiftFlow.Services;
 using ShiftFlow.ViewModels;
 
@@ -25,13 +26,15 @@ public class DepartmentsController : Controller
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-        if (!await _memberService.IsMemberAsync(organizationId, userId))
+        var role = await _memberService.GetRoleAsync(organizationId, userId);
+        if (role is null)
         {
             return Forbid();
         }
 
         var departments = await _departmentService.GetDepartmentsAsync(organizationId);
         ViewData["OrganizationId"] = organizationId;
+        ViewData["IsManager"] = role != OrganizationRole.Employee; // hides the add-department form for Employees
         return View(departments);
     }
 
