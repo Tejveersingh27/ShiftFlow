@@ -6,6 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!-- ShiftFlow.Tests lives in a subfolder of this project. Without this,
+       the SDK's default "compile every .cs file in every subfolder" behavior
+       would try to compile the test files into THIS project too, and fail
+       because this project never references xunit. -->
+  <ItemGroup>
+    <Compile Remove="ShiftFlow.Tests/**" />
+    <Content Remove="ShiftFlow.Tests/**" />
+    <None Remove="ShiftFlow.Tests/**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.11" />
