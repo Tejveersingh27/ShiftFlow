@@ -23,4 +23,8 @@ public class OrganizationMember
     // How many hours a week this person may be scheduled for.
     // Checked by SchedulingService.AssignEmployeeAsync before an assignment.
     public int MaxWeeklyHours { get; set; } = 40;
+
+    // --- which department (optional — a member can be unassigned) ---
+    public Guid? DepartmentId { get; set; }
+    public Department? Department { get; set; }
 }

@@ -17,4 +17,8 @@ public class AddMemberViewModel
     [Required]
     [Display(Name = "Role")]
     public OrganizationRole Role { get; set; } = OrganizationRole.Employee;
+
+    // Optional — a member doesn't have to belong to a department.
+    [Display(Name = "Department")]
+    public Guid? DepartmentId { get; set; }
 }

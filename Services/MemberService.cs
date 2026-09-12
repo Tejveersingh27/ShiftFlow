@@ -57,11 +57,12 @@ public class MemberService
         return await _db.OrganizationMembers
             .Where(m => m.OrganizationId == organizationId)
             .Include(m => m.User) // JOIN Users ON OrganizationMembers.UserId = Users.Id
+            .Include(m => m.Department) // JOIN Departments ON OrganizationMembers.DepartmentId = Departments.Id (may be null)
             .OrderBy(m => m.User.UserName)
             .ToListAsync();
     }
 
-    public async Task<AddMemberResult> AddMemberAsync(Guid organizationId, string actingUserId, string email, OrganizationRole role)
+    public async Task<AddMemberResult> AddMemberAsync(Guid organizationId, string actingUserId, string email, OrganizationRole role, Guid? departmentId = null)
     {
         // Is the person doing this an Owner or Manager of THIS org?
         if (!await IsManagerAsync(organizationId, actingUserId))
@@ -94,7 +95,8 @@ public class MemberService
             OrganizationId = organizationId,
             UserId = targetUser.Id,
             Role = role,
-            JoinedAtUtc = DateTime.UtcNow
+            JoinedAtUtc = DateTime.UtcNow,
+            DepartmentId = departmentId
         });
         await _db.SaveChangesAsync();
 

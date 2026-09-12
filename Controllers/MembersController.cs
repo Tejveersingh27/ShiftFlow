@@ -11,10 +11,12 @@ namespace ShiftFlow.Controllers;
 public class MembersController : Controller
 {
     private readonly MemberService _memberService;
+    private readonly DepartmentService _departmentService;
 
-    public MembersController(MemberService memberService)
+    public MembersController(MemberService memberService, DepartmentService departmentService)
     {
         _memberService = memberService;
+        _departmentService = departmentService;
     }
 
     // GET /Members?organizationId=...  — the team list.
@@ -33,6 +35,7 @@ public class MembersController : Controller
         var members = await _memberService.GetMembersAsync(organizationId);
         ViewData["OrganizationId"] = organizationId;
         ViewData["IsManager"] = role != OrganizationRole.Employee; // hides the add-member form for Employees
+        ViewData["Departments"] = await _departmentService.GetDepartmentsAsync(organizationId); // for the add-member dropdown
         return View(members);
     }
 
@@ -51,7 +54,7 @@ public class MembersController : Controller
 
         var actingUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-        var result = await _memberService.AddMemberAsync(model.OrganizationId, actingUserId, model.Email, model.Role);
+        var result = await _memberService.AddMemberAsync(model.OrganizationId, actingUserId, model.Email, model.Role, model.DepartmentId);
 
         switch (result)
         {

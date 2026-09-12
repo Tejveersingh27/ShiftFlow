@@ -3,6 +3,7 @@
     ViewData["Title"] = "Team";
     var organizationId = (Guid)ViewData["OrganizationId"]!;
     var isManager = (bool)ViewData["IsManager"]!;
+    var departments = (List<Department>)ViewData["Departments"]!;
 }
 
 <h1 class="h3 mb-3">Team</h1>
@@ -12,6 +13,7 @@
         <tr>
             <th>Email</th>
             <th>Role</th>
+            <th>Department</th>
             <th>Joined</th>
         </tr>
     </thead>
@@ -21,6 +23,7 @@
             <tr>
                 <td>@m.User.Email</td>
                 <td><span class="badge bg-secondary">@m.Role</span></td>
+                <td>@(m.Department?.Name ?? "—")</td>
                 <td>@m.JoinedAtUtc.ToString("MMM d, yyyy")</td>
             </tr>
         }
@@ -48,6 +51,17 @@
             <select name="Role" class="form-select">
                 <option value="@OrganizationRole.Manager">Manager</option>
                 <option value="@OrganizationRole.Employee" selected>Employee</option>
+            </select>
+        </div>
+
+        <div class="col-sm-4">
+            <label class="form-label">Department</label>
+            <select name="DepartmentId" class="form-select">
+                <option value="">— None —</option>
+                @foreach (var d in departments)
+                {
+                    <option value="@d.Id">@d.Name</option>
+                }
             </select>
         </div>
 

@@ -8,6 +8,7 @@ public class DepartmentService
 {
     private readonly ApplicationDbContext _db;
     private readonly MemberService _memberService;
+    private readonly ILogger<DepartmentService> _logger;
 
     // Outcome of trying to create a department — same "enum of outcomes" pattern
     // MemberService.AddMemberResult used.
@@ -18,10 +19,11 @@ public class DepartmentService
         DuplicateName
     }
 
-    public DepartmentService(ApplicationDbContext db, MemberService memberService)
+    public DepartmentService(ApplicationDbContext db, MemberService memberService, ILogger<DepartmentService> logger)
     {
         _db = db;
         _memberService = memberService;
+        _logger = logger;
     }
 
     public async Task<List<Department>> GetDepartmentsAsync(Guid organizationId)
@@ -38,6 +40,7 @@ public class DepartmentService
         // into MemberService.IsManagerAsync so it isn't copy-pasted per service.
         if (!await _memberService.IsManagerAsync(organizationId, actingUserId))
         {
+            _logger.LogWarning("User {UserId} is not authorized to create departments in organization {OrganizationId}", actingUserId, organizationId);
             return CreateDepartmentResult.NotAuthorized;
         }
 
@@ -46,6 +49,7 @@ public class DepartmentService
 
         if (duplicate)
         {
+            _logger.LogWarning("Department name {Name} already exists in organization {OrganizationId}", name, organizationId);
             return CreateDepartmentResult.DuplicateName;
         }
 
@@ -57,6 +61,7 @@ public class DepartmentService
         });
         await _db.SaveChangesAsync();
 
+        _logger.LogInformation("Department {Name} created in organization {OrganizationId}", name, organizationId);
         return CreateDepartmentResult.Created;
     }
 }
