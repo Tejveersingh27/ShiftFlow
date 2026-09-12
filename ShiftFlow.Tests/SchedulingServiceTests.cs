@@ -22,7 +22,7 @@ public class SchedulingServiceTests
         SeedAsync()
     {
         var db = CreateInMemoryDb();
-        var service = new SchedulingService(db);
+        var service = new SchedulingService(db, new MemberService(db));
 
         var orgId = Guid.CreateVersion7();
         var ownerId = "owner-user";

@@ -41,6 +41,16 @@ public class MemberService
         return membership?.Role;
     }
 
+    // The one check every "can this person create/change things in this org"
+    // decision boils down to: are they a member at all, and if so, not an Employee.
+    // Owner and Manager are treated identically everywhere today, so this is a
+    // single yes/no gate rather than returning the specific role.
+    public async Task<bool> IsManagerAsync(Guid organizationId, string userId)
+    {
+        var role = await GetRoleAsync(organizationId, userId);
+        return role is OrganizationRole.Owner or OrganizationRole.Manager;
+    }
+
     public async Task<List<OrganizationMember>> GetMembersAsync(Guid organizationId) // return all the members
     {
         return await _db.OrganizationMembers
@@ -53,10 +63,7 @@ public class MemberService
     public async Task<AddMemberResult> AddMemberAsync(Guid organizationId, string actingUserId, string email, OrganizationRole role)
     {
         // Is the person doing this an Owner or Manager of THIS org?
-        var actingMembership = await _db.OrganizationMembers
-            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == actingUserId);
-
-        if (actingMembership is null || actingMembership.Role == OrganizationRole.Employee)
+        if (!await IsManagerAsync(organizationId, actingUserId))
         {
             return AddMemberResult.NotAuthorized;
         }

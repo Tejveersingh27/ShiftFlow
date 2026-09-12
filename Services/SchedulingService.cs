@@ -7,6 +7,7 @@ namespace ShiftFlow.Services;
 public class SchedulingService
 {
     private readonly ApplicationDbContext _db;
+    private readonly MemberService _memberService;
 
     public enum ScheduleResult
     {
@@ -26,9 +27,10 @@ public class SchedulingService
         WeeklyHourLimitExceeded
     }
 
-    public SchedulingService(ApplicationDbContext db)
+    public SchedulingService(ApplicationDbContext db, MemberService memberService)
     {
         _db = db;
+        _memberService = memberService;
     }
 
     // THE conflict-detection check: can this member take this shift?
@@ -42,9 +44,7 @@ public class SchedulingService
 
         var organizationId = shift.Schedule.OrganizationId;
 
-        var actingMembership = await _db.OrganizationMembers
-            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == actingUserId);
-        if (actingMembership is null || actingMembership.Role == OrganizationRole.Employee)
+        if (!await _memberService.IsManagerAsync(organizationId, actingUserId))
             return AssignmentResult.NotAuthorized;
 
         // The person being assigned must belong to the SAME org as the shift —
@@ -104,15 +104,11 @@ public class SchedulingService
     public async Task<ScheduleResult> CreateScheduleAsync(Guid organizationId, string actingUserId, DateOnly weekStartDate)
     {
         // Same Owner/Manager check as DepartmentService.CreateDepartmentAsync
-        // and MemberService.AddMemberAsync.
-        var actingMembership = await _db.OrganizationMembers
-            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == actingUserId);
-
-        if (actingMembership is null || actingMembership.Role == OrganizationRole.Employee)
+        // and MemberService.AddMemberAsync — via the shared MemberService.IsManagerAsync.
+        if (!await _memberService.IsManagerAsync(organizationId, actingUserId))
         {
             return ScheduleResult.NotAuthorized;
         }
-        // checks if the requester is amnager/owner ie not an employee
 
 // imsert one schedule row into the database, with no shifts yet. The weekStartDate is the Monday of the week this schedule covers.
 
@@ -130,18 +126,13 @@ public class SchedulingService
     // This adds a timeslot (unassigned) to an existing schedule. The schedule must exist, and the requester must be an Owner or Manager of the org that owns the schedule. 
         public async Task<ScheduleResult> CreateShiftAsync(Guid scheduleId, string actingUserId, DateTime startsAtUtc, DateTime endsAtUtc)
     {
-        // Same Owner/Manager check as DepartmentService.CreateDepartmentAsync
-        // and MemberService.AddMemberAsync.
-          var schedule = await _db.Schedules.FindAsync(scheduleId);
+        var schedule = await _db.Schedules.FindAsync(scheduleId);
         if (schedule is null)
         {
             return ScheduleResult.ScheduleNotFound;
         }
 
-        var actingMembership = await _db.OrganizationMembers
-            .FirstOrDefaultAsync(m => m.OrganizationId == schedule.OrganizationId && m.UserId == actingUserId);
-
-        if (actingMembership is null || actingMembership.Role == OrganizationRole.Employee)
+        if (!await _memberService.IsManagerAsync(schedule.OrganizationId, actingUserId))
         {
             return ScheduleResult.NotAuthorized;
         }
@@ -168,9 +159,7 @@ public class SchedulingService
         var schedule = await _db.Schedules.FindAsync(scheduleId);
         if (schedule is null) return ScheduleResult.ScheduleNotFound;
 
-        var actingMembership = await _db.OrganizationMembers
-            .FirstOrDefaultAsync(m => m.OrganizationId == schedule.OrganizationId && m.UserId == actingUserId);
-        if (actingMembership is null || actingMembership.Role == OrganizationRole.Employee)
+        if (!await _memberService.IsManagerAsync(schedule.OrganizationId, actingUserId))
             return ScheduleResult.NotAuthorized;
 
         // `schedule` was already loaded above, so EF is already tracking it.

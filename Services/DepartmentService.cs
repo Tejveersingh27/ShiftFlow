@@ -7,6 +7,7 @@ namespace ShiftFlow.Services;
 public class DepartmentService
 {
     private readonly ApplicationDbContext _db;
+    private readonly MemberService _memberService;
 
     // Outcome of trying to create a department — same "enum of outcomes" pattern
     // MemberService.AddMemberResult used.
@@ -17,9 +18,10 @@ public class DepartmentService
         DuplicateName
     }
 
-    public DepartmentService(ApplicationDbContext db)
+    public DepartmentService(ApplicationDbContext db, MemberService memberService)
     {
         _db = db;
+        _memberService = memberService;
     }
 
     public async Task<List<Department>> GetDepartmentsAsync(Guid organizationId)
@@ -32,13 +34,9 @@ public class DepartmentService
 
     public async Task<CreateDepartmentResult> CreateDepartmentAsync(Guid organizationId, string actingUserId, string name)
     {
-        // Same authorization check as MemberService.AddMemberAsync: must be an
-        // Owner or Manager of THIS org (looked up via OrganizationMembers, the
-        // user<->org link table).
-        var actingMembership = await _db.OrganizationMembers
-            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == actingUserId);
-
-        if (actingMembership is null || actingMembership.Role == OrganizationRole.Employee)
+        // Same authorization check as MemberService.AddMemberAsync — pulled out
+        // into MemberService.IsManagerAsync so it isn't copy-pasted per service.
+        if (!await _memberService.IsManagerAsync(organizationId, actingUserId))
         {
             return CreateDepartmentResult.NotAuthorized;
         }
