@@ -19,4 +19,8 @@ public class OrganizationMember
     public OrganizationRole Role { get; set; }
 
     public DateTime JoinedAtUtc { get; set; }
+
+    // How many hours a week this person may be scheduled for.
+    // Checked by SchedulingService.AssignEmployeeAsync before an assignment.
+    public int MaxWeeklyHours { get; set; } = 40;
 }

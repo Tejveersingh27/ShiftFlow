@@ -109,6 +109,7 @@ public class SchedulesController : Controller
         TempData["Error"] = result switch
         {
             SchedulingService.AssignmentResult.OverlappingShift => "This person is already working an overlapping shift.",
+            SchedulingService.AssignmentResult.WeeklyHourLimitExceeded => "This would put them over their weekly hour limit.",
             SchedulingService.AssignmentResult.MemberNotInOrganization => "That person isn't a member of this organization.",
             SchedulingService.AssignmentResult.ShiftNotFound => "Shift not found.",
             _ => null

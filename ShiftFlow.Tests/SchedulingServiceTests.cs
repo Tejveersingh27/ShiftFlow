@@ -114,6 +114,41 @@ public class SchedulingServiceTests
     }
 
     [Fact]
+    public async Task AssignEmployeeAsync_ExceedingWeeklyHours_IsRejected()
+    {
+        // Arrange: the employee already has 30 hours this week (3 shifts of
+        // 10 hours, none overlapping each other or the new one). Their limit
+        // is the default 40. The new shift is 15 hours -> 30 + 15 = 45 > 40.
+        var (db, service, _, ownerId, employeeMemberId, scheduleId) = await SeedAsync();
+
+        Shift TenHourShift(int day) => new()
+        {
+            Id = Guid.CreateVersion7(), ScheduleId = scheduleId,
+            StartsAtUtc = new DateTime(2026, 9, day, 0, 0, 0, DateTimeKind.Utc),
+            EndsAtUtc = new DateTime(2026, 9, day, 10, 0, 0, DateTimeKind.Utc),
+            AssignedMemberId = employeeMemberId
+        };
+
+        var newShift = new Shift
+        {
+            Id = Guid.CreateVersion7(), ScheduleId = scheduleId,
+            StartsAtUtc = new DateTime(2026, 9, 17, 0, 0, 0, DateTimeKind.Utc),
+            EndsAtUtc = new DateTime(2026, 9, 17, 15, 0, 0, DateTimeKind.Utc) // 15 hours, non-overlapping
+        };
+
+        db.Shifts.AddRange(TenHourShift(14), TenHourShift(15), TenHourShift(16), newShift);
+        await db.SaveChangesAsync();
+
+        // Act
+        var result = await service.AssignEmployeeAsync(newShift.Id, ownerId, employeeMemberId);
+
+        // Assert
+        Assert.Equal(SchedulingService.AssignmentResult.WeeklyHourLimitExceeded, result);
+        var reloaded = await db.Shifts.FindAsync(newShift.Id);
+        Assert.Null(reloaded!.AssignedMemberId);
+    }
+
+    [Fact]
     public async Task AssignEmployeeAsync_ByEmployee_IsNotAuthorized()
     {
         // Arrange

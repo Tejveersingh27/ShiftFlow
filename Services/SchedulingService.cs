@@ -22,7 +22,8 @@ public class SchedulingService
         NotAuthorized,
         ShiftNotFound,
         MemberNotInOrganization,
-        OverlappingShift
+        OverlappingShift,
+        WeeklyHourLimitExceeded
     }
 
     public SchedulingService(ApplicationDbContext db)
@@ -52,11 +53,27 @@ public class SchedulingService
             .FirstOrDefaultAsync(m => m.Id == memberId && m.OrganizationId == organizationId);
         if (targetMember is null) return AssignmentResult.MemberNotInOrganization;
 
+// We look at every other shift this person has and see if overlaps iwth the shift being assigned. If any do, we block the assignment. This is the classic interval-overlap test: two ranges overlap if (startA < endB) AND (startB < endA).
         bool hasOverlap = await _db.Shifts
             .Where(s => s.AssignedMemberId == memberId && s.Id != shiftId)
             .AnyAsync(s => s.StartsAtUtc < shift.EndsAtUtc && s.EndsAtUtc > shift.StartsAtUtc);
 
         if (hasOverlap) return AssignmentResult.OverlappingShift;
+
+        // A Schedule represents one week, so "this schedule's shifts" IS
+        // "this person's hours this week." Sum their other shifts in this
+        // same schedule, add this shift's hours, compare to their limit.
+        var otherShiftsThisWeek = await _db.Shifts
+            .Where(s => s.AssignedMemberId == memberId && s.Id != shiftId && s.ScheduleId == shift.ScheduleId)
+            .ToListAsync();
+
+        double hoursAlreadyScheduled = otherShiftsThisWeek.Sum(s => (s.EndsAtUtc - s.StartsAtUtc).TotalHours);
+        double thisShiftHours = (shift.EndsAtUtc - shift.StartsAtUtc).TotalHours;
+
+        if (hoursAlreadyScheduled + thisShiftHours > targetMember.MaxWeeklyHours)
+        {
+            return AssignmentResult.WeeklyHourLimitExceeded;
+        }
 
         shift.AssignedMemberId = memberId;
         await _db.SaveChangesAsync();
