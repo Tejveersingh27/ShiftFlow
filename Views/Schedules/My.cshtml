@@ -1,0 +1,45 @@
+@model List<Shift>
+@{
+    ViewData["Title"] = "My Schedule";
+    var organizationId = (Guid)ViewData["OrganizationId"]!;
+
+    // Group shifts by the week they belong to (each Schedule IS one week),
+    // so the page reads like "Week of Sep 14" -> that week's shifts, in order.
+    var weeks = Model
+        .GroupBy(s => s.Schedule.WeekStartDate)
+        .OrderBy(g => g.Key)
+        .ToList();
+}
+
+<h1 class="h3 mb-3">My Schedule</h1>
+
+@if (!weeks.Any())
+{
+    <p class="text-muted">You have no upcoming published shifts.</p>
+}
+
+@foreach (var week in weeks)
+{
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+        <h2 class="h6 text-muted mb-0">Week of @week.Key.ToString("MMM d, yyyy")</h2>
+        <a asp-controller="Schedules" asp-action="Team" asp-route-id="@week.First().ScheduleId" class="small">
+            Who else is working this week?
+        </a>
+    </div>
+    <div class="mb-3" style="max-width: 480px;">
+        @foreach (var shift in week.OrderBy(s => s.StartsAtUtc))
+        {
+            var isToday = shift.StartsAtUtc.Date == DateTime.UtcNow.Date;
+            <div class="shift-row @(isToday ? "shift-row-today" : "")">
+                <span>
+                    <strong>@shift.StartsAtUtc.ToString("ddd, MMM d")</strong>
+                    @if (isToday)
+                    {
+                        <span class="badge bg-primary ms-1">Today</span>
+                    }
+                </span>
+                <span class="shift-chip">@shift.StartsAtUtc.ToString("h:mm tt") – @shift.EndsAtUtc.ToString("h:mm tt")</span>
+            </div>
+        }
+    </div>
+}

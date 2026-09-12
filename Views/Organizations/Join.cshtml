@@ -1,0 +1,20 @@
+@model JoinOrganizationViewModel
+@{
+    ViewData["Title"] = "Join an organization";
+}
+
+<h1 class="h3 mb-3">Join an organization</h1>
+<p class="text-muted">Ask an owner or manager for their organization's join code.</p>
+
+<form asp-controller="Organizations" asp-action="Join" method="post" style="max-width: 360px;">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+    <div class="mb-3">
+        <label class="form-label">Join code</label>
+        <input asp-for="JoinCode" class="form-control text-uppercase" placeholder="ABC123XY" required />
+        <span asp-validation-for="JoinCode" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Join</button>
+</form>

@@ -49,6 +49,38 @@ public class OrganizationsController : Controller
         TempData["Success"] = $"Organization \"{organization.Name}\" created.";
         return RedirectToAction("Index"); // -> /Organizations (this controller's Index)
     }
+    // GET /Organizations/Join — show the "enter a code" form.
+    [HttpGet]
+    public IActionResult Join()
+    {
+        return View(new JoinOrganizationViewModel());
+    }
+
+    // POST /Organizations/Join — redeem a code and become an Employee there.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Join(JoinOrganizationViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _organizationService.JoinOrganizationAsync(model.JoinCode, userId);
+
+        if (result == OrganizationService.JoinResult.InvalidCode)
+        {
+            ModelState.AddModelError(string.Empty, "That code doesn't match any organization.");
+            return View(model);
+        }
+
+        TempData["Success"] = result == OrganizationService.JoinResult.AlreadyMember
+            ? "You're already a member of that organization."
+            : "You joined the organization.";
+        return RedirectToAction("Index");
+    }
+
     // GET /Organizations  — list the organizations the logged-in user belongs to.
     [HttpGet]
     public async Task<IActionResult> Index()

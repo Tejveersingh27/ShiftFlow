@@ -8,4 +8,5 @@ namespace ShiftFlow.Models.Entities;
 // for example) without touching Identity's own plumbing.
 public class ApplicationUser : IdentityUser
 {
+    public string FullName { get; set; } = string.Empty;
 }

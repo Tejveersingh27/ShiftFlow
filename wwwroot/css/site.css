@@ -29,3 +29,145 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+/* ---------------------------------------------------------------------
+   ShiftFlow design tokens + shell styling
+   --------------------------------------------------------------------- */
+
+:root {
+  --sf-brand: #2563eb;
+  --sf-brand-dark: #1d4ed8;
+  --sf-accent: #16a34a;
+  --sf-accent-bg: #ecfdf5;
+  --sf-bg: #f8fafc;
+  --sf-card-bg: #ffffff;
+  --sf-border: #e2e8f0;
+  --sf-text: #1e293b;
+  --sf-text-muted: #64748b;
+}
+
+body {
+  background-color: var(--sf-bg);
+  color: var(--sf-text);
+}
+
+/* Top nav: white bar, brand-colored logo, subtle active-link underline */
+.navbar {
+  background-color: var(--sf-card-bg) !important;
+  border-bottom: 1px solid var(--sf-border);
+  box-shadow: none !important;
+}
+
+.navbar-brand {
+  color: var(--sf-brand) !important;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.navbar .nav-link {
+  color: var(--sf-text-muted) !important;
+  font-weight: 500;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid transparent;
+}
+
+.navbar .nav-link.active {
+  color: var(--sf-text) !important;
+  border-bottom-color: var(--sf-brand);
+}
+
+/* Main content: a white card floating on the light gray page background,
+   instead of body-colored text sitting directly on the page. */
+.page-shell {
+  background-color: var(--sf-card-bg);
+  border: 1px solid var(--sf-border);
+  border-radius: 12px;
+  padding: 2rem 2.5rem;
+  margin-top: 1.5rem;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1000px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+/* Pages with genuinely wide content (the team-schedule grid) opt out of the
+   narrow cap so their columns aren't squeezed. */
+.page-shell.page-shell-wide {
+  max-width: 1200px;
+}
+
+/* Tables: quieter header row, more breathing room */
+.table thead th {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--sf-text-muted);
+  border-bottom: 2px solid var(--sf-border);
+  font-weight: 600;
+}
+
+.table td, .table th {
+  vertical-align: middle;
+}
+
+/* Buttons: brand color instead of Bootstrap's default blue */
+.btn-primary {
+  background-color: var(--sf-brand);
+  border-color: var(--sf-brand);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--sf-brand-dark);
+  border-color: var(--sf-brand-dark);
+}
+
+.btn-outline-primary {
+  color: var(--sf-brand);
+  border-color: var(--sf-brand);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--sf-brand);
+  border-color: var(--sf-brand);
+}
+
+/* Shift chips — used on My Schedule + Team Schedule to show a shift as a
+   small colored block instead of plain text, echoing the green shift blocks
+   in real scheduling apps. */
+.shift-chip {
+  display: inline-block;
+  background-color: var(--sf-accent-bg);
+  color: #047857;
+  border-left: 3px solid var(--sf-accent);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.shift-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--sf-border);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  background-color: var(--sf-card-bg);
+}
+
+.shift-row-today {
+  border-color: var(--sf-brand);
+  background-color: #eff6ff;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.page-header h1 {
+  margin-bottom: 0;
+}

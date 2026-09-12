@@ -52,6 +52,15 @@ public class MemberService
         return role is OrganizationRole.Owner or OrganizationRole.Manager;
     }
 
+    // The full membership row for this user in this org — used when we need
+    // the OrganizationMember.Id itself (e.g. to filter shifts assigned to them),
+    // not just their role.
+    public async Task<OrganizationMember?> GetMembershipAsync(Guid organizationId, string userId)
+    {
+        return await _db.OrganizationMembers
+            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == userId);
+    }
+
     public async Task<List<OrganizationMember>> GetMembersAsync(Guid organizationId) // return all the members
     {
         return await _db.OrganizationMembers

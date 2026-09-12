@@ -8,6 +8,7 @@ using Serilog;
 using ShiftFlow.Data;
 using ShiftFlow.Models.Entities;
 using ShiftFlow.Services;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 

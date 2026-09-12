@@ -9,6 +9,10 @@
     <span class="badge @(schedule.Status == ScheduleStatus.Published ? "bg-success" : "bg-secondary")">@schedule.Status</span>
 </div>
 
+<a asp-controller="Schedules" asp-action="Team" asp-route-id="@schedule.Id" class="btn btn-outline-secondary btn-sm mb-3">
+    View team schedule
+</a>
+
 @if (schedule.Status == ScheduleStatus.Draft)
 {
     <form asp-controller="Schedules" asp-action="Publish" method="post" class="mb-4">
@@ -39,7 +43,7 @@
                 <td>
                     @if (shift.AssignedMember is not null)
                     {
-                        @shift.AssignedMember.User.Email
+                        @(string.IsNullOrWhiteSpace(shift.AssignedMember.User.FullName) ? shift.AssignedMember.User.Email : shift.AssignedMember.User.FullName)
                     }
                     else if (schedule.Status == ScheduleStatus.Draft)
                     {
@@ -51,7 +55,7 @@
                             <select name="memberId" class="form-select form-select-sm" style="max-width: 220px;">
                                 @foreach (var member in Model.OrganizationMembers)
                                 {
-                                    <option value="@member.Id">@member.User.Email (@member.Role)</option>
+                                    <option value="@member.Id">@(string.IsNullOrWhiteSpace(member.User.FullName) ? member.User.Email : member.User.FullName) (@member.Role)</option>
                                 }
                             </select>
                             <button type="submit" class="btn btn-sm btn-outline-primary">Assign</button>

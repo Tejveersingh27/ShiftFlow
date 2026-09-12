@@ -46,6 +46,26 @@ public class SchedulesController : Controller
         return View(schedules);
     }
 
+    // GET /Schedules/My?organizationId=... — the logged-in user's own shifts,
+    // across all published schedules in this org. Any member can view their
+    // own shifts, regardless of role.
+    [HttpGet]
+    public async Task<IActionResult> My(Guid organizationId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        var membership = await _memberService.GetMembershipAsync(organizationId, userId);
+        if (membership is null)
+        {
+            return Forbid(); // not a member of this org
+        }
+
+        var shifts = await _schedulingService.GetShiftsForMemberAsync(membership.Id);
+
+        ViewData["OrganizationId"] = organizationId;
+        return View(shifts);
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateScheduleViewModel model)
@@ -94,6 +114,34 @@ public class SchedulesController : Controller
 
         var members = await _memberService.GetMembersAsync(schedule.OrganizationId);
         ViewData["IsManager"] = role != OrganizationRole.Employee;
+        return View(new ScheduleDetailsViewModel { Schedule = schedule, OrganizationMembers = members });
+    }
+
+    // GET /Schedules/Team/{id} — read-only grid: every org member as a row,
+    // the week's 7 days as columns. Same visibility rule as Details (Employees
+    // can't see a Draft) but anyone who's a member can view it, not just managers.
+    [HttpGet]
+    public async Task<IActionResult> Team(Guid id)
+    {
+        var schedule = await _schedulingService.GetScheduleWithShiftsAsync(id);
+        if (schedule is null)
+        {
+            return NotFound();
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var role = await _memberService.GetRoleAsync(schedule.OrganizationId, userId);
+        if (role is null)
+        {
+            return Forbid();
+        }
+
+        if (role == OrganizationRole.Employee && schedule.Status == ScheduleStatus.Draft)
+        {
+            return Forbid();
+        }
+
+        var members = await _memberService.GetMembersAsync(schedule.OrganizationId);
         return View(new ScheduleDetailsViewModel { Schedule = schedule, OrganizationMembers = members });
     }
 

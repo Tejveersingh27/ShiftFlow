@@ -8,8 +8,11 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3 mb-0">Your organizations</h1>
-    @* asp-controller / asp-action build the URL for us: /Organizations/Create *@
-    <a asp-controller="Organizations" asp-action="Create" class="btn btn-primary">New organization</a>
+    <span>
+        <a asp-controller="Organizations" asp-action="Join" class="btn btn-outline-primary">Join with a code</a>
+        @* asp-controller / asp-action build the URL for us: /Organizations/Create *@
+        <a asp-controller="Organizations" asp-action="Create" class="btn btn-primary">New organization</a>
+    </span>
 </div>
 
 @* Plain C# if. The user belongs to no organizations -> show an empty state. *@
@@ -29,7 +32,13 @@ else
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 @* @m.Organization.Name prints the value into the HTML.
                    Organization is filled because the service used .Include(m => m.Organization). *@
-                <span>@m.Organization.Name</span>
+                <span>
+                    @m.Organization.Name
+                    @if (m.Role != OrganizationRole.Employee)
+                    {
+                        <span class="text-muted small ms-2">Join code: <code>@m.Organization.JoinCode</code></span>
+                    }
+                </span>
                 <span>
                     <span class="badge bg-secondary me-2">@m.Role</span>
                     <a asp-controller="Members" asp-action="Index" asp-route-organizationId="@m.OrganizationId" class="btn btn-sm btn-outline-secondary">Team</a>

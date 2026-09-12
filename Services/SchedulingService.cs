@@ -89,6 +89,18 @@ public class SchedulingService
         return AssignmentResult.Assigned;
     }
 
+    // All of one member's shifts across every PUBLISHED schedule, oldest first.
+    // Only published — same rule as everywhere else: a Draft schedule is a
+    // manager's working copy, not something the assigned person should see yet.
+    public async Task<List<Shift>> GetShiftsForMemberAsync(Guid memberId)
+    {
+        return await _db.Shifts
+            .Include(s => s.Schedule)
+            .Where(s => s.AssignedMemberId == memberId && s.Schedule.Status == ScheduleStatus.Published)
+            .OrderBy(s => s.StartsAtUtc)
+            .ToListAsync();
+    }
+
     public async Task<List<Schedule>> GetSchedulesAsync(Guid organizationId)
     {
         return await _db.Schedules

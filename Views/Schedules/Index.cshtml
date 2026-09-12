@@ -7,6 +7,10 @@
 
 <h1 class="h3 mb-3">Schedules</h1>
 
+<a asp-controller="Schedules" asp-action="My" asp-route-organizationId="@organizationId" class="btn btn-outline-primary btn-sm mb-3">
+    My Schedule
+</a>
+
 @if (Model.Count == 0)
 {
     <p class="text-muted">No schedules yet.</p>

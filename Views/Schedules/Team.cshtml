@@ -1,0 +1,56 @@
+@model ScheduleDetailsViewModel
+@{
+    ViewData["Title"] = "Team Schedule";
+    ViewData["WideLayout"] = true;
+    var schedule = Model.Schedule;
+    var days = Enumerable.Range(0, 7).Select(i => schedule.WeekStartDate.AddDays(i)).ToList();
+
+    // Members grouped by department first (unassigned last), then by name —
+    // same grouping idea as the "Primary Job" column in a real location schedule.
+    var members = Model.OrganizationMembers
+        .OrderBy(m => m.Department?.Name ?? "zzz")
+        .ThenBy(m => m.User.UserName)
+        .ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Team Schedule — Week of @schedule.WeekStartDate.ToString("MMM d, yyyy")</h1>
+    <span class="badge @(schedule.Status == ScheduleStatus.Published ? "bg-success" : "bg-secondary")">@schedule.Status</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered align-middle">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Department</th>
+                @foreach (var day in days)
+                {
+                    <th>@day.ToString("ddd M/d")</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var member in members)
+            {
+                <tr>
+                    <td>@(string.IsNullOrWhiteSpace(member.User.FullName) ? member.User.Email : member.User.FullName)</td>
+                    <td>@(member.Department?.Name ?? "—")</td>
+                    @foreach (var day in days)
+                    {
+                        var shiftsThatDay = schedule.Shifts
+                            .Where(s => s.AssignedMemberId == member.Id && DateOnly.FromDateTime(s.StartsAtUtc) == day)
+                            .OrderBy(s => s.StartsAtUtc)
+                            .ToList();
+                        <td>
+                            @foreach (var shift in shiftsThatDay)
+                            {
+                                <div class="shift-chip mb-1">@shift.StartsAtUtc.ToString("h:mm tt")–@shift.EndsAtUtc.ToString("h:mm tt")</div>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

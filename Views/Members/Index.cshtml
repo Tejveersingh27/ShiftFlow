@@ -21,7 +21,7 @@
         @foreach (var m in Model)
         {
             <tr>
-                <td>@m.User.Email</td>
+                <td>@(string.IsNullOrWhiteSpace(m.User.FullName) ? m.User.Email : m.User.FullName)</td>
                 <td><span class="badge bg-secondary">@m.Role</span></td>
                 <td>@(m.Department?.Name ?? "—")</td>
                 <td>@m.JoinedAtUtc.ToString("MMM d, yyyy")</td>
