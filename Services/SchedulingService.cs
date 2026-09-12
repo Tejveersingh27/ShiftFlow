@@ -8,6 +8,7 @@ public class SchedulingService
 {
     private readonly ApplicationDbContext _db;
     private readonly MemberService _memberService;
+    private readonly ILogger<SchedulingService> _logger;
 
     public enum ScheduleResult
     {
@@ -27,10 +28,11 @@ public class SchedulingService
         WeeklyHourLimitExceeded
     }
 
-    public SchedulingService(ApplicationDbContext db, MemberService memberService)
+    public SchedulingService(ApplicationDbContext db, MemberService memberService, ILogger<SchedulingService> logger)
     {
         _db = db;
         _memberService = memberService;
+        _logger = logger;
     }
 
     // THE conflict-detection check: can this member take this shift?
@@ -58,7 +60,11 @@ public class SchedulingService
             .Where(s => s.AssignedMemberId == memberId && s.Id != shiftId)
             .AnyAsync(s => s.StartsAtUtc < shift.EndsAtUtc && s.EndsAtUtc > shift.StartsAtUtc);
 
-        if (hasOverlap) return AssignmentResult.OverlappingShift;
+        if (hasOverlap)
+        {
+            _logger.LogWarning("Assignment rejected: member {MemberId} already has an overlapping shift for shift {ShiftId}", memberId, shiftId);
+            return AssignmentResult.OverlappingShift;
+        }
 
         // A Schedule represents one week, so "this schedule's shifts" IS
         // "this person's hours this week." Sum their other shifts in this
@@ -72,12 +78,14 @@ public class SchedulingService
 
         if (hoursAlreadyScheduled + thisShiftHours > targetMember.MaxWeeklyHours)
         {
+            _logger.LogWarning("Assignment rejected: member {MemberId} would exceed their {MaxWeeklyHours}-hour weekly limit for shift {ShiftId}", memberId, targetMember.MaxWeeklyHours, shiftId);
             return AssignmentResult.WeeklyHourLimitExceeded;
         }
 
         shift.AssignedMemberId = memberId;
         await _db.SaveChangesAsync();
 
+        _logger.LogInformation("Shift {ShiftId} assigned to member {MemberId}", shiftId, memberId);
         return AssignmentResult.Assigned;
     }
 

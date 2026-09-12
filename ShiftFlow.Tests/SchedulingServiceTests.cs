@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using ShiftFlow.Data;
 using ShiftFlow.Models.Entities;
 using ShiftFlow.Services;
@@ -22,7 +23,7 @@ public class SchedulingServiceTests
         SeedAsync()
     {
         var db = CreateInMemoryDb();
-        var service = new SchedulingService(db, new MemberService(db));
+        var service = new SchedulingService(db, new MemberService(db), NullLogger<SchedulingService>.Instance);
 
         var orgId = Guid.CreateVersion7();
         var ownerId = "owner-user";

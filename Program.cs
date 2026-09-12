@@ -4,11 +4,18 @@
 //   2) Build the "pipeline" every web request walks through -> app.Use...
 
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 using ShiftFlow.Data;
 using ShiftFlow.Models.Entities;
 using ShiftFlow.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Replace the default logger with Serilog. UseSerilog swaps out the whole
+// logging pipeline the app hands to every ILogger<T> we inject later —
+// every controller/service log call now goes through this instead.
+builder.Host.UseSerilog((context, configuration) => configuration
+    .WriteTo.Console());
 
 // ---------------------------------------------------------------------------
 // JOB 1: register services (the "tools" the app can ask for later)
@@ -60,6 +67,11 @@ if (app.Environment.IsDevelopment())
 {
     // Adds the "Apply Migrations" button to the DB error page during development.
     app.UseMigrationsEndPoint();
+
+    // Shows the full stack trace + exact line number for any unhandled
+    // exception, right in the browser. Only ever runs locally — never in
+    // production, since it would expose internals to real users.
+    app.UseDeveloperExceptionPage();
 }
 else
 {
