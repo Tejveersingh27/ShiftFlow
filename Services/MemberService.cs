@@ -7,7 +7,7 @@ namespace ShiftFlow.Services;
 public class MemberService
 {
     private readonly ApplicationDbContext _db;
-
+    private readonly ILogger<MemberService> _logger;
     // Outcome of trying to add a member. Only Added is success —
     // the other three are different reasons it can fail.
     public enum AddMemberResult
@@ -18,9 +18,10 @@ public class MemberService
         UserNotFound
     }
 
-    public MemberService(ApplicationDbContext db) // the constructor takes in an ApplicationDbContext
+    public MemberService(ApplicationDbContext db, ILogger<MemberService> logger) // the constructor takes in an ApplicationDbContext
     {
         _db = db; // framework calls this constructor
+        _logger = logger; // store the logger instance
     }
 
     // Is this user a member (any role) of this org? Used to guard the team page itself —
@@ -65,6 +66,7 @@ public class MemberService
         // Is the person doing this an Owner or Manager of THIS org?
         if (!await IsManagerAsync(organizationId, actingUserId))
         {
+            _logger.LogWarning("User {UserId} is not authorized to add members to organization {OrganizationId}", actingUserId, organizationId);
             return AddMemberResult.NotAuthorized;
         }
 
@@ -72,6 +74,7 @@ public class MemberService
         var targetUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
         if (targetUser is null)
         {
+            _logger.LogWarning("User with email {Email} not found", email);
             return AddMemberResult.UserNotFound;
         }
 
@@ -79,7 +82,8 @@ public class MemberService
         bool alreadyMember = await _db.OrganizationMembers
             .AnyAsync(m => m.OrganizationId == organizationId && m.UserId == targetUser.Id);
         if (alreadyMember)
-        {
+        {   
+            _logger.LogWarning("User with email {Email} is already a member of organization {OrganizationId}", email, organizationId);
             return AddMemberResult.AlreadyMember;
         }
 
@@ -94,6 +98,7 @@ public class MemberService
         });
         await _db.SaveChangesAsync();
 
+        _logger.LogInformation("User {Email} added to organization {OrganizationId} as {Role}", email, organizationId, role);
         return AddMemberResult.Added;
     }
 }
