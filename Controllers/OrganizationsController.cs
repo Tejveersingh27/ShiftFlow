@@ -56,7 +56,8 @@ public class OrganizationsController : Controller
         return View(new JoinOrganizationViewModel());
     }
 
-    // POST /Organizations/Join — redeem a code and become an Employee there.
+    // POST /Organizations/Join — redeem a code and submit a request to join
+    // (Pending, not instant — an Owner/Manager has to approve it).
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Join(JoinOrganizationViewModel model)
@@ -75,9 +76,9 @@ public class OrganizationsController : Controller
             return View(model);
         }
 
-        TempData["Success"] = result == OrganizationService.JoinResult.AlreadyMember
-            ? "You're already a member of that organization."
-            : "You joined the organization.";
+        TempData["Success"] = result == OrganizationService.JoinResult.AlreadyRequested
+            ? "You've already requested to join (or are already a member of) that organization."
+            : "Request sent — an owner or manager needs to approve it before you're in.";
         return RedirectToAction("Index");
     }
 

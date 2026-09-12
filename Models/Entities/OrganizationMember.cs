@@ -20,6 +20,12 @@ public class OrganizationMember
 
     public DateTime JoinedAtUtc { get; set; }
 
+    // Active = a real member. Pending = requested via a join code, awaiting
+    // an Owner/Manager's approval. Active is listed first so it's the enum's
+    // default (0) — every membership created any other way (direct add,
+    // becoming an org's Owner) is Active immediately, no approval needed.
+    public MembershipStatus Status { get; set; } = MembershipStatus.Active;
+
     // How many hours a week this person may be scheduled for.
     // Checked by SchedulingService.AssignEmployeeAsync before an assignment.
     public int MaxWeeklyHours { get; set; } = 40;

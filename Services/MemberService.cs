@@ -24,21 +24,22 @@ public class MemberService
         _logger = logger; // store the logger instance
     }
 
-    // Is this user a member (any role) of this org? Used to guard the team page itself —
-    // otherwise a logged-in user could view ANY org's member list just by knowing its id.
+    // Is this user an ACTIVE member (any role) of this org? Used to guard the
+    // team page itself — otherwise a logged-in user could view ANY org's
+    // member list just by knowing its id. Pending (unapproved) doesn't count.
     public async Task<bool> IsMemberAsync(Guid organizationId, string userId)
     {
         return await _db.OrganizationMembers
-            .AnyAsync(m => m.OrganizationId == organizationId && m.UserId == userId);
+            .AnyAsync(m => m.OrganizationId == organizationId && m.UserId == userId && m.Status == MembershipStatus.Active);
     }
 
-    // Which role does this user hold in this org? Null if they're not a member at all.
-    // Used where "any member" isn't specific enough — e.g. Employees should see
-    // less than Owners/Managers on the Schedules pages.
+    // Which role does this user hold in this org? Null if they're not an
+    // ACTIVE member — someone with a Pending request can't do or see
+    // anything yet, same as not being a member at all.
     public async Task<OrganizationRole?> GetRoleAsync(Guid organizationId, string userId)
     {
         var membership = await _db.OrganizationMembers
-            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == userId);
+            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == userId && m.Status == MembershipStatus.Active);
         return membership?.Role;
     }
 
@@ -54,21 +55,82 @@ public class MemberService
 
     // The full membership row for this user in this org — used when we need
     // the OrganizationMember.Id itself (e.g. to filter shifts assigned to them),
-    // not just their role.
+    // not just their role. Active only, same reasoning as GetRoleAsync.
     public async Task<OrganizationMember?> GetMembershipAsync(Guid organizationId, string userId)
     {
         return await _db.OrganizationMembers
-            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == userId);
+            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == userId && m.Status == MembershipStatus.Active);
     }
 
-    public async Task<List<OrganizationMember>> GetMembersAsync(Guid organizationId) // return all the members
+    public async Task<List<OrganizationMember>> GetMembersAsync(Guid organizationId) // return all the ACTIVE members
     {
         return await _db.OrganizationMembers
-            .Where(m => m.OrganizationId == organizationId)
+            .Where(m => m.OrganizationId == organizationId && m.Status == MembershipStatus.Active)
             .Include(m => m.User) // JOIN Users ON OrganizationMembers.UserId = Users.Id
             .Include(m => m.Department) // JOIN Departments ON OrganizationMembers.DepartmentId = Departments.Id (may be null)
             .OrderBy(m => m.User.UserName)
             .ToListAsync();
+    }
+
+    // Everyone waiting on approval for this org — what a manager sees on the
+    // "Pending requests" panel.
+    public async Task<List<OrganizationMember>> GetPendingMembersAsync(Guid organizationId)
+    {
+        return await _db.OrganizationMembers
+            .Where(m => m.OrganizationId == organizationId && m.Status == MembershipStatus.Pending)
+            .Include(m => m.User)
+            .OrderBy(m => m.JoinedAtUtc)
+            .ToListAsync();
+    }
+
+    public enum MembershipActionResult
+    {
+        Approved,
+        Rejected,
+        NotAuthorized,
+        NotFound
+    }
+
+    public async Task<MembershipActionResult> ApproveMembershipAsync(Guid membershipId, string actingUserId)
+    {
+        var membership = await _db.OrganizationMembers.FindAsync(membershipId);
+        if (membership is null)
+        {
+            return MembershipActionResult.NotFound;
+        }
+
+        if (!await IsManagerAsync(membership.OrganizationId, actingUserId))
+        {
+            return MembershipActionResult.NotAuthorized;
+        }
+
+        membership.Status = MembershipStatus.Active;
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Membership {MembershipId} approved in organization {OrganizationId}", membershipId, membership.OrganizationId);
+        return MembershipActionResult.Approved;
+    }
+
+    // Rejecting just deletes the pending row — they're free to request again
+    // later, there's no "banned" state to track.
+    public async Task<MembershipActionResult> RejectMembershipAsync(Guid membershipId, string actingUserId)
+    {
+        var membership = await _db.OrganizationMembers.FindAsync(membershipId);
+        if (membership is null)
+        {
+            return MembershipActionResult.NotFound;
+        }
+
+        if (!await IsManagerAsync(membership.OrganizationId, actingUserId))
+        {
+            return MembershipActionResult.NotAuthorized;
+        }
+
+        _db.OrganizationMembers.Remove(membership);
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Membership {MembershipId} rejected in organization {OrganizationId}", membershipId, membership.OrganizationId);
+        return MembershipActionResult.Rejected;
     }
 
     public async Task<AddMemberResult> AddMemberAsync(Guid organizationId, string actingUserId, string email, OrganizationRole role, Guid? departmentId = null)

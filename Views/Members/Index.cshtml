@@ -4,9 +4,39 @@
     var organizationId = (Guid)ViewData["OrganizationId"]!;
     var isManager = (bool)ViewData["IsManager"]!;
     var departments = (List<Department>)ViewData["Departments"]!;
+    var pendingMembers = (List<OrganizationMember>)ViewData["PendingMembers"]!;
 }
 
 <h1 class="h3 mb-3">Team</h1>
+
+@if (isManager && pendingMembers.Any())
+{
+    <div class="mb-4">
+        <h2 class="h6 text-muted mb-2">Pending requests</h2>
+        <div style="max-width: 640px;">
+            @foreach (var p in pendingMembers)
+            {
+                <div class="shift-row">
+                    <span>@(string.IsNullOrWhiteSpace(p.User.FullName) ? p.User.Email : p.User.FullName)</span>
+                    <span>
+                        <form asp-controller="Members" asp-action="Approve" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="membershipId" value="@p.Id" />
+                            <input type="hidden" name="organizationId" value="@organizationId" />
+                            <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                        </form>
+                        <form asp-controller="Members" asp-action="Reject" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="membershipId" value="@p.Id" />
+                            <input type="hidden" name="organizationId" value="@organizationId" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                        </form>
+                    </span>
+                </div>
+            }
+        </div>
+    </div>
+}
 
 <table class="table align-middle">
     <thead>

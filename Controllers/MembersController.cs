@@ -34,9 +34,56 @@ public class MembersController : Controller
 
         var members = await _memberService.GetMembersAsync(organizationId);
         ViewData["OrganizationId"] = organizationId;
-        ViewData["IsManager"] = role != OrganizationRole.Employee; // hides the add-member form for Employees
+        var isManager = role != OrganizationRole.Employee;
+        ViewData["IsManager"] = isManager; // hides the add-member form for Employees
         ViewData["Departments"] = await _departmentService.GetDepartmentsAsync(organizationId); // for the add-member dropdown
+
+        // Only managers need to see who's waiting on approval.
+        ViewData["PendingMembers"] = isManager
+            ? await _memberService.GetPendingMembersAsync(organizationId)
+            : new List<OrganizationMember>();
+
         return View(members);
+    }
+
+    // POST /Members/Approve — an Owner/Manager approves a pending join request.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Approve(Guid membershipId, Guid organizationId)
+    {
+        var actingUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _memberService.ApproveMembershipAsync(membershipId, actingUserId);
+
+        if (result == MemberService.MembershipActionResult.NotAuthorized)
+        {
+            return Forbid();
+        }
+
+        TempData["Success"] = result == MemberService.MembershipActionResult.Approved
+            ? "Request approved."
+            : null;
+
+        return RedirectToAction("Index", new { organizationId });
+    }
+
+    // POST /Members/Reject — an Owner/Manager rejects (deletes) a pending request.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reject(Guid membershipId, Guid organizationId)
+    {
+        var actingUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _memberService.RejectMembershipAsync(membershipId, actingUserId);
+
+        if (result == MemberService.MembershipActionResult.NotAuthorized)
+        {
+            return Forbid();
+        }
+
+        TempData["Success"] = result == MemberService.MembershipActionResult.Rejected
+            ? "Request rejected."
+            : null;
+
+        return RedirectToAction("Index", new { organizationId });
     }
 
     // POST /Members/Add — add someone to the org. Only an Owner/Manager of

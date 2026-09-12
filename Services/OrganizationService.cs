@@ -18,8 +18,8 @@ public class OrganizationService
 
     public enum JoinResult
     {
-        Joined,
-        AlreadyMember,
+        RequestSubmitted,
+        AlreadyRequested,
         InvalidCode
     }
 
@@ -78,11 +78,13 @@ public class OrganizationService
             return JoinResult.InvalidCode;
         }
 
-        bool alreadyMember = await _db.OrganizationMembers
+        // Covers both an active member and someone with an existing pending
+        // request — either way, they shouldn't submit a second request.
+        bool alreadyRequested = await _db.OrganizationMembers
             .AnyAsync(m => m.OrganizationId == organization.Id && m.UserId == userId);
-        if (alreadyMember)
+        if (alreadyRequested)
         {
-            return JoinResult.AlreadyMember;
+            return JoinResult.AlreadyRequested;
         }
 
         _db.OrganizationMembers.Add(new OrganizationMember
@@ -91,11 +93,12 @@ public class OrganizationService
             OrganizationId = organization.Id,
             UserId = userId,
             Role = OrganizationRole.Employee,
-            JoinedAtUtc = DateTime.UtcNow
+            JoinedAtUtc = DateTime.UtcNow,
+            Status = MembershipStatus.Pending
         });
         await _db.SaveChangesAsync();
 
-        return JoinResult.Joined;
+        return JoinResult.RequestSubmitted;
     }
 
     private static string GenerateJoinCode()

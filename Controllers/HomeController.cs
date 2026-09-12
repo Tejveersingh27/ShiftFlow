@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using ShiftFlow.Models;
+using ShiftFlow.Models.Entities;
 using ShiftFlow.Services;
 using ShiftFlow.ViewModels;
 
@@ -31,7 +32,7 @@ public class HomeController : Controller
         var memberships = await _organizationService.GetMembershipsForUserAsync(userId);
 
         var cards = new List<MyScheduleCardViewModel>();
-        foreach (var membership in memberships)
+        foreach (var membership in memberships.Where(m => m.Status == MembershipStatus.Active))
         {
             var shifts = await _schedulingService.GetShiftsForMemberAsync(membership.Id);
             var upcoming = shifts
