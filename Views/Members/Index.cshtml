@@ -41,20 +41,52 @@
 <table class="table align-middle">
     <thead>
         <tr>
+            <th>#</th>
             <th>Email</th>
             <th>Role</th>
             <th>Department</th>
             <th>Joined</th>
+            @if (isManager)
+            {
+                <th></th>
+            }
         </tr>
     </thead>
     <tbody>
         @foreach (var m in Model)
         {
             <tr>
-                <td>@(string.IsNullOrWhiteSpace(m.User.FullName) ? m.User.Email : m.User.FullName)</td>
+                <td class="text-muted">@m.EmployeeNumber</td>
+                <td>
+                    @if (isManager)
+                    {
+                        <a asp-controller="Members" asp-action="Details" asp-route-membershipId="@m.Id" asp-route-organizationId="@organizationId">
+                            @(string.IsNullOrWhiteSpace(m.User.FullName) ? m.User.Email : m.User.FullName)
+                        </a>
+                    }
+                    else
+                    {
+                        @(string.IsNullOrWhiteSpace(m.User.FullName) ? m.User.Email : m.User.FullName)
+                    }
+                </td>
                 <td><span class="badge bg-secondary">@m.Role</span></td>
                 <td>@(m.Department?.Name ?? "—")</td>
                 <td>@m.JoinedAtUtc.ToString("MMM d, yyyy")</td>
+                @if (isManager)
+                {
+                    <td>
+                        @if (m.Role != OrganizationRole.Owner)
+                        {
+                            <form asp-controller="Members" asp-action="Remove" method="post"
+                                  onsubmit="return confirm('Remove this person from the organization?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="membershipId" value="@m.Id" />
+                                <input type="hidden" name="organizationId" value="@organizationId" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                            </form>
+                        }
+                    </td>
+                }
             </tr>
         }
     </tbody>

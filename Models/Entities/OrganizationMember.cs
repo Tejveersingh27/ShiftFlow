@@ -20,6 +20,11 @@ public class OrganizationMember
 
     public DateTime JoinedAtUtc { get; set; }
 
+    // A per-organization sequential ID (1, 2, 3...), assigned the moment
+    // someone becomes Active — not at Pending request time, so rejected
+    // requests don't burn a number. 0 = not assigned yet (still Pending).
+    public int EmployeeNumber { get; set; }
+
     // Active = a real member. Pending = requested via a join code, awaiting
     // an Owner/Manager's approval. Active is listed first so it's the enum's
     // default (0) — every membership created any other way (direct add,

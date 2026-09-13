@@ -40,7 +40,8 @@ public class OrganizationService
             OrganizationId = organization.Id,
             UserId = userId,
             Role = OrganizationRole.Owner,
-            JoinedAtUtc = DateTime.UtcNow
+            JoinedAtUtc = DateTime.UtcNow,
+            EmployeeNumber = 1 // brand-new org — the Owner is always the first member
         };
 
         _db.Organizations.Add(organization); // added ut to the DBContext, but not yet saved to the database

@@ -68,4 +68,29 @@ public class DepartmentsController : Controller
 
         return RedirectToAction("Index", new { organizationId = model.OrganizationId });
     }
+
+    // POST /Departments/Rename — Owner/Manager renames an existing department.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Rename(Guid departmentId, string name, Guid organizationId)
+    {
+        var actingUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _departmentService.RenameDepartmentAsync(departmentId, actingUserId, name);
+
+        switch (result)
+        {
+            case DepartmentService.UpdateDepartmentResult.NotAuthorized:
+                return Forbid();
+
+            case DepartmentService.UpdateDepartmentResult.DuplicateName:
+                TempData["Error"] = "A department with that name already exists.";
+                break;
+
+            case DepartmentService.UpdateDepartmentResult.Updated:
+                TempData["Success"] = "Department renamed.";
+                break;
+        }
+
+        return RedirectToAction("Index", new { organizationId });
+    }
 }

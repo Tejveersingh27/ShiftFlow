@@ -19,6 +19,14 @@ public class DepartmentService
         DuplicateName
     }
 
+    public enum UpdateDepartmentResult
+    {
+        Updated,
+        NotAuthorized,
+        NotFound,
+        DuplicateName
+    }
+
     public DepartmentService(ApplicationDbContext db, MemberService memberService, ILogger<DepartmentService> logger)
     {
         _db = db;
@@ -63,5 +71,33 @@ public class DepartmentService
 
         _logger.LogInformation("Department {Name} created in organization {OrganizationId}", name, organizationId);
         return CreateDepartmentResult.Created;
+    }
+
+    public async Task<UpdateDepartmentResult> RenameDepartmentAsync(Guid departmentId, string actingUserId, string newName)
+    {
+        var department = await _db.Departments.FindAsync(departmentId);
+        if (department is null)
+        {
+            return UpdateDepartmentResult.NotFound;
+        }
+
+        if (!await _memberService.IsManagerAsync(department.OrganizationId, actingUserId))
+        {
+            _logger.LogWarning("User {UserId} is not authorized to rename departments in organization {OrganizationId}", actingUserId, department.OrganizationId);
+            return UpdateDepartmentResult.NotAuthorized;
+        }
+
+        bool duplicate = await _db.Departments
+            .AnyAsync(d => d.OrganizationId == department.OrganizationId && d.Name == newName && d.Id != departmentId);
+        if (duplicate)
+        {
+            return UpdateDepartmentResult.DuplicateName;
+        }
+
+        department.Name = newName;
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Department {DepartmentId} renamed to {Name}", departmentId, newName);
+        return UpdateDepartmentResult.Updated;
     }
 }

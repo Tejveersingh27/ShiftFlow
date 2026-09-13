@@ -83,12 +83,55 @@ public class MemberService
             .ToListAsync();
     }
 
+    // One member's full row (with User + Department loaded) — the employee
+    // details page. Active only; a Pending request isn't a real profile yet.
+    public async Task<OrganizationMember?> GetMemberByIdAsync(Guid membershipId)
+    {
+        return await _db.OrganizationMembers
+            .Include(m => m.User)
+            .Include(m => m.Department)
+            .FirstOrDefaultAsync(m => m.Id == membershipId && m.Status == MembershipStatus.Active);
+    }
+
     public enum MembershipActionResult
     {
         Approved,
         Rejected,
+        Removed,
+        Updated,
         NotAuthorized,
-        NotFound
+        NotFound,
+        CannotRemoveOwner
+    }
+
+    // A manager edits someone's department, role, or weekly-hour limit from
+    // the employee details page.
+    public async Task<MembershipActionResult> UpdateMemberAsync(Guid membershipId, string actingUserId, Guid? departmentId, OrganizationRole role, int maxWeeklyHours)
+    {
+        var membership = await _db.OrganizationMembers.FindAsync(membershipId);
+        if (membership is null)
+        {
+            return MembershipActionResult.NotFound;
+        }
+
+        if (!await IsManagerAsync(membership.OrganizationId, actingUserId))
+        {
+            return MembershipActionResult.NotAuthorized;
+        }
+
+        // The Owner's role can't be changed here — same reasoning as not
+        // being able to remove them: there must always be one.
+        if (membership.Role != OrganizationRole.Owner)
+        {
+            membership.Role = role;
+        }
+
+        membership.DepartmentId = departmentId;
+        membership.MaxWeeklyHours = maxWeeklyHours;
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Membership {MembershipId} updated in organization {OrganizationId}", membershipId, membership.OrganizationId);
+        return MembershipActionResult.Updated;
     }
 
     public async Task<MembershipActionResult> ApproveMembershipAsync(Guid membershipId, string actingUserId)
@@ -105,10 +148,22 @@ public class MemberService
         }
 
         membership.Status = MembershipStatus.Active;
+        membership.EmployeeNumber = await GetNextEmployeeNumberAsync(membership.OrganizationId);
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Membership {MembershipId} approved in organization {OrganizationId}", membershipId, membership.OrganizationId);
         return MembershipActionResult.Approved;
+    }
+
+    // The next sequential employee number for this org — one past whatever
+    // the highest assigned number currently is (removed members' numbers
+    // aren't reused, so there are no accidental duplicates).
+    public async Task<int> GetNextEmployeeNumberAsync(Guid organizationId)
+    {
+        var highest = await _db.OrganizationMembers
+            .Where(m => m.OrganizationId == organizationId)
+            .MaxAsync(m => (int?)m.EmployeeNumber) ?? 0;
+        return highest + 1;
     }
 
     // Rejecting just deletes the pending row — they're free to request again
@@ -131,6 +186,34 @@ public class MemberService
 
         _logger.LogInformation("Membership {MembershipId} rejected in organization {OrganizationId}", membershipId, membership.OrganizationId);
         return MembershipActionResult.Rejected;
+    }
+
+    // Removes an already-active member from the org entirely. The Owner
+    // (whoever created the org) can't be removed this way — every org needs
+    // at least one person nothing can lock out.
+    public async Task<MembershipActionResult> RemoveMemberAsync(Guid membershipId, string actingUserId)
+    {
+        var membership = await _db.OrganizationMembers.FindAsync(membershipId);
+        if (membership is null)
+        {
+            return MembershipActionResult.NotFound;
+        }
+
+        if (!await IsManagerAsync(membership.OrganizationId, actingUserId))
+        {
+            return MembershipActionResult.NotAuthorized;
+        }
+
+        if (membership.Role == OrganizationRole.Owner)
+        {
+            return MembershipActionResult.CannotRemoveOwner;
+        }
+
+        _db.OrganizationMembers.Remove(membership);
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Membership {MembershipId} removed from organization {OrganizationId}", membershipId, membership.OrganizationId);
+        return MembershipActionResult.Removed;
     }
 
     public async Task<AddMemberResult> AddMemberAsync(Guid organizationId, string actingUserId, string email, OrganizationRole role, Guid? departmentId = null)
@@ -167,7 +250,8 @@ public class MemberService
             UserId = targetUser.Id,
             Role = role,
             JoinedAtUtc = DateTime.UtcNow,
-            DepartmentId = departmentId
+            DepartmentId = departmentId,
+            EmployeeNumber = await GetNextEmployeeNumberAsync(organizationId)
         });
         await _db.SaveChangesAsync();
 

@@ -12,11 +12,13 @@ public class MembersController : Controller
 {
     private readonly MemberService _memberService;
     private readonly DepartmentService _departmentService;
+    private readonly SchedulingService _schedulingService;
 
-    public MembersController(MemberService memberService, DepartmentService departmentService)
+    public MembersController(MemberService memberService, DepartmentService departmentService, SchedulingService schedulingService)
     {
         _memberService = memberService;
         _departmentService = departmentService;
+        _schedulingService = schedulingService;
     }
 
     // GET /Members?organizationId=...  — the team list.
@@ -44,6 +46,56 @@ public class MembersController : Controller
             : new List<OrganizationMember>();
 
         return View(members);
+    }
+
+    // GET /Members/Details/{membershipId} — one employee's profile. Manager-only:
+    // this is a management tool (edit department/role/hours), not something
+    // Employees need to click into for each other.
+    [HttpGet]
+    public async Task<IActionResult> Details(Guid membershipId, Guid organizationId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        if (!await _memberService.IsManagerAsync(organizationId, userId))
+        {
+            return Forbid();
+        }
+
+        var member = await _memberService.GetMemberByIdAsync(membershipId);
+        if (member is null || member.OrganizationId != organizationId)
+        {
+            return NotFound();
+        }
+
+        var shifts = await _schedulingService.GetShiftsForMemberAsync(member.Id);
+        var upcoming = shifts.Where(s => s.StartsAtUtc.Date >= DateTime.UtcNow.Date).Take(5).ToList();
+
+        ViewData["OrganizationId"] = organizationId;
+        return View(new MemberDetailsViewModel
+        {
+            Member = member,
+            Departments = await _departmentService.GetDepartmentsAsync(organizationId),
+            UpcomingShifts = upcoming
+        });
+    }
+
+    // POST /Members/Update — a manager edits someone's department, role, or hour limit.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(Guid membershipId, Guid organizationId, Guid? departmentId, OrganizationRole role, int maxWeeklyHours)
+    {
+        var actingUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _memberService.UpdateMemberAsync(membershipId, actingUserId, departmentId, role, maxWeeklyHours);
+
+        if (result == MemberService.MembershipActionResult.NotAuthorized)
+        {
+            return Forbid();
+        }
+
+        TempData["Success"] = result == MemberService.MembershipActionResult.Updated
+            ? "Employee details updated."
+            : null;
+
+        return RedirectToAction("Details", new { membershipId, organizationId });
     }
 
     // POST /Members/Approve — an Owner/Manager approves a pending join request.
@@ -81,6 +133,30 @@ public class MembersController : Controller
 
         TempData["Success"] = result == MemberService.MembershipActionResult.Rejected
             ? "Request rejected."
+            : null;
+
+        return RedirectToAction("Index", new { organizationId });
+    }
+
+    // POST /Members/Remove — an Owner/Manager removes an active member from the org.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Remove(Guid membershipId, Guid organizationId)
+    {
+        var actingUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _memberService.RemoveMemberAsync(membershipId, actingUserId);
+
+        if (result == MemberService.MembershipActionResult.NotAuthorized)
+        {
+            return Forbid();
+        }
+
+        TempData["Error"] = result == MemberService.MembershipActionResult.CannotRemoveOwner
+            ? "The organization's owner can't be removed."
+            : null;
+
+        TempData["Success"] = result == MemberService.MembershipActionResult.Removed
+            ? "Member removed."
             : null;
 
         return RedirectToAction("Index", new { organizationId });

@@ -13,10 +13,25 @@
 }
 else
 {
-    <ul class="list-group mb-4" style="max-width: 420px;">
+    <ul class="list-group mb-4" style="max-width: 480px;">
         @foreach (var d in Model)
         {
-            <li class="list-group-item">@d.Name</li>
+            <li class="list-group-item">
+                @if (isManager)
+                {
+                    <form asp-controller="Departments" asp-action="Rename" method="post" class="d-flex gap-2">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="departmentId" value="@d.Id" />
+                        <input type="hidden" name="organizationId" value="@organizationId" />
+                        <input type="text" name="name" value="@d.Name" class="form-control form-control-sm" required minlength="2" maxlength="50" />
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Save</button>
+                    </form>
+                }
+                else
+                {
+                    @d.Name
+                }
+            </li>
         }
     </ul>
 }

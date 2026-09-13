@@ -1,0 +1,83 @@
+@model MemberDetailsViewModel
+@{
+    ViewData["Title"] = "Employee details";
+    var organizationId = (Guid)ViewData["OrganizationId"]!;
+    var member = Model.Member;
+    var displayName = string.IsNullOrWhiteSpace(member.User.FullName) ? member.User.Email : member.User.FullName;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-0">@displayName</h1>
+        <p class="text-muted mb-0">Employee #@member.EmployeeNumber &middot; @member.User.Email</p>
+    </div>
+    <a asp-controller="Members" asp-action="Index" asp-route-organizationId="@organizationId" class="btn btn-outline-secondary btn-sm">
+        Back to Team
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <h2 class="h6 text-muted mb-2">Edit</h2>
+        <form asp-controller="Members" asp-action="Update" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="membershipId" value="@member.Id" />
+            <input type="hidden" name="organizationId" value="@organizationId" />
+
+            <div class="mb-3">
+                <label class="form-label">Role</label>
+                @if (member.Role == OrganizationRole.Owner)
+                {
+                    <input type="text" class="form-control" value="Owner" disabled />
+                    <div class="form-text">The organization's owner can't be changed here.</div>
+                }
+                else
+                {
+                    <select name="role" class="form-select">
+                        <option value="@OrganizationRole.Manager" selected="@(member.Role == OrganizationRole.Manager)">Manager</option>
+                        <option value="@OrganizationRole.Employee" selected="@(member.Role == OrganizationRole.Employee)">Employee</option>
+                    </select>
+                }
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Department</label>
+                <select name="departmentId" class="form-select">
+                    <option value="">— None —</option>
+                    @foreach (var d in Model.Departments)
+                    {
+                        <option value="@d.Id" selected="@(member.DepartmentId == d.Id)">@d.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Max weekly hours</label>
+                <input type="number" name="maxWeeklyHours" class="form-control" value="@member.MaxWeeklyHours" min="1" max="168" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save changes</button>
+        </form>
+    </div>
+
+    <div class="col-md-6">
+        <h2 class="h6 text-muted mb-2">Upcoming shifts</h2>
+        @if (!Model.UpcomingShifts.Any())
+        {
+            <p class="text-muted small">Nothing scheduled.</p>
+        }
+        else
+        {
+            @foreach (var shift in Model.UpcomingShifts)
+            {
+                <div class="shift-row">
+                    <span>@shift.StartsAtUtc.ToString("ddd, MMM d")</span>
+                    <span class="shift-chip">@shift.StartsAtUtc.ToString("h:mm tt") – @shift.EndsAtUtc.ToString("h:mm tt")</span>
+                </div>
+            }
+        }
+
+        <h2 class="h6 text-muted mt-4 mb-2">Joined</h2>
+        <p>@member.JoinedAtUtc.ToString("MMM d, yyyy")</p>
+    </div>
+</div>
